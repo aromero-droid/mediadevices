@@ -62,6 +62,10 @@
       statusEl.className = 'status ' + (cls || '');
     }
 
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function simplifyDevice(d) {
       // Keep the standard MediaDeviceInfo fields; add capabilities if present
       const base = {
@@ -106,6 +110,8 @@
       } catch (err) {
         base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
       }
+
+      await sleep();
 
       return base;
     }
