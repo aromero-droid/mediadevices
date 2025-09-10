@@ -62,7 +62,7 @@
       statusEl.className = 'status ' + (cls || '');
     }
 
-    function simplifyDevice(d) {
+    async function simplifyDevice(d) {
       // Keep the standard MediaDeviceInfo fields; add capabilities if present
       const base = {
         kind: d.kind,
@@ -86,8 +86,8 @@
 
       try{
         if (d.kind === "videoinput"){
-          const device = navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-          const tracks = device.getTracks();
+          const media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+          const tracks = media.getTracks();
           base.tracks = tracks.map(t => {
             const {id, kind, label} = t;
             const baseTrack = {id, kind, label};
@@ -122,7 +122,7 @@
         const devices = await navigator.mediaDevices.enumerateDevices();
 
         // Map each device, attaching capabilities ONLY when it’s an InputDeviceInfo
-        const simplified = devices.map(simplifyDevice);
+        const simplified = await Promise.all(devices.map(simplifyDevice));
 
         out.textContent = JSON.stringify(simplified, null, 2);
         setStatus(`Found ${devices.length} device(s).`);
