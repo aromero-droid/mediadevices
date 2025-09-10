@@ -95,6 +95,7 @@
             try {
               const caps = t.getCapabilities();
               baseTrack.capabilities = JSON.parse(JSON.stringify(caps));
+              t.stop();
             } catch (err) {
               baseTrack._errors [`getCapabilities failed: ${err && err.message ? err.message : String(err)}`];
             }
