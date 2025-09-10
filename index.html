@@ -86,7 +86,7 @@
 
       try{
         if (d.kind === "videoinput"){
-          const media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+          let media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
           base.tracks = media.getTracks().map(t => {
             const {id, kind, label} = t;
             const baseTrack = {id, kind, label};
@@ -100,7 +100,8 @@
             return baseTrack;
           });
 
-          media.getTracks().map (t => t.stop());
+          media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+          media.getTracks().map (t=>t.stop());
         }
       } catch (err) {
         base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
