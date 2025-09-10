@@ -105,7 +105,7 @@
           });
 
           media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-          media.getVideoTracks().map(t => t.stop());
+          media.getVideoTracks().forEach(t => t.stop());
         }
       } catch (err) {
         base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
@@ -130,7 +130,10 @@
         const devices = await navigator.mediaDevices.enumerateDevices();
 
         // Map each device, attaching capabilities ONLY when it’s an InputDeviceInfo
-        const simplified = await Promise.all(devices.map(simplifyDevice));
+        const simplified = [];
+        for (let i = 0 ; i < devices.length; i++) {
+            simplified.push(await simplifyDevice(devices[i]));
+        }
 
         out.textContent = JSON.stringify(simplified, null, 2);
         setStatus(`Found ${devices.length} device(s).`);
