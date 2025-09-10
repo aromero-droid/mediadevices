@@ -149,7 +149,8 @@
     async function grantOnce() {
       try {
         setStatus('Requesting mic/cam permission…');
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        let media = await navigator.mediaDevices.getUserMedia({ video: true });
+        media.getVideoTracks().forEach(t => t.stop());
         setStatus('Permission handled.');
         await enumerateWithCaps();
       } catch (e) { 
