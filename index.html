@@ -111,7 +111,7 @@
         base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
       }
 
-      await sleep();
+      await sleep(500);
 
       return base;
     }
