@@ -36,7 +36,8 @@
 
     <div class="actions">
       <button id="refresh" type="button">Refresh</button>
-      <button id="grant" type="button">Grant mic/cam access + Refresh</button>
+      <button id="grant" type="button">Grant access + Refresh</button>
+      <button id="grantTrack" type="button">Grant access + Refresh with Track</button>
       <span id="status" class="status"></span>
     </div>
 
@@ -66,7 +67,7 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function simplifyDevice(d) {
+    async function simplifyDevice(d, options) {
       // Keep the standard MediaDeviceInfo fields; add capabilities if present
       const base = {
         kind: d.kind,
@@ -88,27 +89,29 @@
         base._errors = [`getCapabilities failed: ${err && err.message ? err.message : String(err)}`];
       }
 
-      try{
-        if (d.kind === "videoinput"){
-          let media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-          base.tracks = media.getTracks().map(t => {
-            const {id, kind, label} = t;
-            const baseTrack = {id, kind, label};
+      if (options.track) {
+        try {
+          if (d.kind === "videoinput"){
+            let media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+            base.tracks = media.getTracks().map(t => {
+              const {id, kind, label} = t;
+              const baseTrack = {id, kind, label};
 
-            try {
-              const caps = t.getCapabilities();
-              baseTrack.capabilities = JSON.parse(JSON.stringify(caps));
-            } catch (err) {
-              baseTrack._errors [`getCapabilities failed: ${err && err.message ? err.message : String(err)}`];
-            }
-            return baseTrack;
-          });
+              try {
+                const caps = t.getCapabilities();
+                baseTrack.capabilities = JSON.parse(JSON.stringify(caps));
+              } catch (err) {
+                baseTrack._errors [`getCapabilities failed: ${err && err.message ? err.message : String(err)}`];
+              }
+              return baseTrack;
+            });
 
-          media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-          media.getVideoTracks().forEach(t => t.stop());
+            media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+            media.getVideoTracks().forEach(t => t.stop());
+          }
+        } catch (err) {
+          base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
         }
-      } catch (err) {
-        base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
       }
 
       await sleep(500);
@@ -116,55 +119,60 @@
       return base;
     }
 
-    async function enumerateWithCaps() {
-      if (!navigator.mediaDevices?.enumerateDevices) {
-        out.textContent = JSON.stringify(
-          { error: "navigator.mediaDevices.enumerateDevices() not supported in this browser." },
-          null, 2
-        );
-        return;
-      }
-      setStatus('Enumerating devices…');
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-
-        // Map each device, attaching capabilities ONLY when it’s an InputDeviceInfo
-        const simplified = [];
-        for (let i = 0 ; i < devices.length; i++) {
-            simplified.push(await simplifyDevice(devices[i]));
+    async function enumerateWithCaps(options) {
+      return async () => {
+        if (!navigator.mediaDevices?.enumerateDevices) {
+          out.textContent = JSON.stringify(
+            { error: "navigator.mediaDevices.enumerateDevices() not supported in this browser." },
+            null, 2
+          );
+          return;
         }
+        setStatus('Enumerating devices…');
 
-        out.textContent = JSON.stringify(simplified, null, 2);
-        setStatus(`Found ${devices.length} device(s).`);
-      } catch (e) {
-        out.textContent = JSON.stringify(
-          { error: String(e && e.message ? e.message : e) },
-          null, 2
-        );
-        setStatus('Enumeration failed.', 'err');
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+
+          // Map each device, attaching capabilities ONLY when it’s an InputDeviceInfo
+          const simplified = [];
+          for (let i = 0 ; i < devices.length; i++) {
+              simplified.push(await simplifyDevice(devices[i], options));
+          }
+
+          out.textContent = JSON.stringify(simplified, null, 2);
+          setStatus(`Found ${devices.length} device(s).`);
+        } catch (e) {
+          out.textContent = JSON.stringify(
+            { error: String(e && e.message ? e.message : e) },
+            null, 2
+          );
+          setStatus('Enumeration failed.', 'err');
+        }
       }
     }
 
-    async function grantOnce() {
-      try {
-        setStatus('Requesting mic/cam permission…');
-        let media = await navigator.mediaDevices.getUserMedia({ video: true });
-        media.getVideoTracks().forEach(t => t.stop());
-        setStatus('Permission handled.');
-        await enumerateWithCaps();
-      } catch (e) { 
-        out.textContent = JSON.stringify(
-          { error: String(e && e.message ? e.message : e) },
-          null, 2
-        );
-        setStatus('Permission denied or unavailable.', 'warn');
+    function grantOnce(options) { 
+      return async () => {
+        try {
+          setStatus('Requesting mic/cam permission…');
+          let media = await navigator.mediaDevices.getUserMedia({ video: true });
+          media.getVideoTracks().forEach(t => t.stop());
+          setStatus('Permission handled.');
+          await enumerateWithCaps(options)();
+        } catch (e) { 
+          out.textContent = JSON.stringify(
+            { error: String(e && e.message ? e.message : e) },
+            null, 2
+          );
+          setStatus('Permission denied or unavailable.', 'warn');
+        } 
       }
     }
 
     // Wire up UI
-    refreshBtn.addEventListener('click', enumerateWithCaps);
-    grantBtn.addEventListener('click', grantOnce);
+    refreshBtn.addEventListener('click', enumerateWithCaps({}));
+    grantBtn.addEventListener('click', grantOnce({}));
+    grantBtnTrack.addEventListener('click', grantOnce({track: true}));
 
     // // Initial load
     // enumerateWithCaps();
