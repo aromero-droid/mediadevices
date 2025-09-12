@@ -63,10 +63,6 @@
       statusEl.className = 'status ' + (cls || '');
     }
 
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     async function simplifyDevice(d, options) {
       // Keep the standard MediaDeviceInfo fields; add capabilities if present
       const base = {
@@ -113,13 +109,10 @@
           base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
         }
       }
-
-      await sleep(500);
-
       return base;
     }
 
-    async function enumerateWithCaps(options) {
+    function enumerateWithCaps(options) {
       return async () => {
         if (!navigator.mediaDevices?.enumerateDevices) {
           out.textContent = JSON.stringify(
