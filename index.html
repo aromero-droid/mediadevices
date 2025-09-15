@@ -59,6 +59,10 @@
     const grantBtn = document.getElementById('grant');
     const grantBtnTrack = document.getElementById('grantTrack');
 
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     function setStatus(msg, cls='') {
       statusEl.textContent = msg || '';
       statusEl.className = 'status ' + (cls || '');
@@ -89,11 +93,11 @@
       if (options.track) {
         try {
           if (d.kind === "videoinput"){
-            let media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-            base.tracks = media.getTracks().map(t => {
+            const media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
+            const tracks = media.getVideoTracks();
+            base.tracks = tracks.map(t => {
               const {id, kind, label} = t;
               const baseTrack = {id, kind, label};
-
               try {
                 const caps = t.getCapabilities();
                 baseTrack.capabilities = JSON.parse(JSON.stringify(caps));
@@ -103,13 +107,14 @@
               return baseTrack;
             });
 
-            media = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: d.deviceId}}});
-            media.getVideoTracks().forEach(t => t.stop());
+            tracks.forEach(t => t.stop());
           }
         } catch (err) {
           base._track_errors = [`getTracks failed: ${err && err.message ? err.message : String(err)}`];
         }
       }
+
+      await sleep(1000);
       return base;
     }
 
